@@ -1,0 +1,636 @@
+1. Structure
+book-lab/
+│
+├── backend/
+│   ├── models/
+│   │   └── Book.js
+│   │
+│   ├── middleware/
+│   │   └── protect.js
+│   │
+│   ├── routes/
+│   │   ├── auth.js
+│   │   └── books.js
+│   │
+│   └── server.js
+│
+└── frontend/
+    └── React application
+2. Backend setup
+Open terminal:
+mkdir book-lab
+cd book-lab
+mkdir backend
+cd backend
+npm init -y
+npm install express mongoose cors
+npm install --save-dev nodemon
+
+3. Create the Mongoose model
+Create:
+backend/models/Book.js
+
+Put:
+const mongoose = require("mongoose");
+
+const bookSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true
+  },
+  author: {
+    type: String
+  },
+  year: {
+    type: Number
+  }
+});
+
+module.exports = mongoose.model("Book", bookSchema);
+
+4. Hardcoded authentication
+Create:
+backend/routes/auth.js
+const express = require("express");
+
+const router = express.Router();
+
+const HARDCODED_USER = {
+  email: "admin@gmail.com",
+  password: "123456"
+};
+
+router.post("/register", (req, res) => {
+  const { email, password } = req.body;
+
+  if (
+    email === HARDCODED_USER.email &&
+    password === HARDCODED_USER.password
+  ) {
+    return res.status(200).json({
+      success: true,
+      token: "lab-token-123"
+    });
+  }
+
+  return res.status(401).json({
+    success: false,
+    message: "Invalid credentials"
+  });
+});
+
+router.post("/login", (req, res) => {
+  const { email, password } = req.body;
+
+  if (
+    email === HARDCODED_USER.email &&
+    password === HARDCODED_USER.password
+  ) {
+    return res.status(200).json({
+      success: true,
+      token: "lab-token-123"
+    });
+  }
+
+  return res.status(401).json({
+    success: false,
+    message: "Invalid credentials"
+  });
+});
+
+module.exports = router;
+
+5. Protect middleware
+Create:
+backend/middleware/protect.js
+
+const protect = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader !== "Bearer lab-token-123") {
+    return res.status(401).json({
+      message: "Unauthorized"
+    });
+  }
+
+  next();
+};
+
+module.exports = protect;
+6. CRUD routes
+Create:
+backend/routes/books.js
+
+const express = require("express");
+const Book = require("../models/Book");
+const protect = require("../middleware/protect");
+
+const router = express.Router();
+POST — Create
+router.post("/", protect, async (req, res) => {
+  try {
+    const { title, author, year } = req.body;
+
+    if (!title) {
+      return res.status(400).json({
+        message: "Title is required"
+      });
+    }
+
+    const book = await Book.create({
+      title,
+      author,
+      year
+    });
+
+    res.status(201).json(book);
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error"
+    });
+  }
+});
+
+GET all
+router.get("/", protect, async (req, res) => {
+  try {
+    const books = await Book.find();
+
+    res.status(200).json(books);
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error"
+    });
+  }
+});
+
+GET one by ID
+
+router.get("/:id", protect, async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+
+    if (!book) {
+      return res.status(404).json({
+        message: "Book not found"
+      });
+    }
+
+    res.status(200).json(book);
+  } catch (error) {
+    res.status(404).json({
+      message: "Book not found"
+    });
+  }
+});
+
+DELETE
+
+router.delete("/:id", protect, async (req, res) => {
+  try {
+    const book = await Book.findByIdAndDelete(req.params.id);
+
+    if (!book) {
+      return res.status(404).json({
+        message: "Book not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Book deleted successfully"
+    });
+  } catch (error) {
+    res.status(404).json({
+      message: "Book not found"
+    });
+  }
+});
+
+module.exports = router;
+
+Complete
+const express = require("express");
+const Book = require("../models/Book");
+const protect = require("../middleware/protect");
+
+const router = express.Router();
+
+router.post("/", protect, async (req, res) => {
+  try {
+    const { title, author, year } = req.body;
+
+    if (!title) {
+      return res.status(400).json({
+        message: "Title is required"
+      });
+    }
+
+    const book = await Book.create({
+      title,
+      author,
+      year
+    });
+
+    res.status(201).json(book);
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error"
+    });
+  }
+});
+
+router.get("/", protect, async (req, res) => {
+  try {
+    const books = await Book.find();
+
+    res.status(200).json(books);
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error"
+    });
+  }
+});
+
+router.get("/:id", protect, async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+
+    if (!book) {
+      return res.status(404).json({
+        message: "Book not found"
+      });
+    }
+
+    res.status(200).json(book);
+  } catch (error) {
+    res.status(404).json({
+      message: "Book not found"
+    });
+  }
+});
+
+router.delete("/:id", protect, async (req, res) => {
+  try {
+    const book = await Book.findByIdAndDelete(req.params.id);
+
+    if (!book) {
+      return res.status(404).json({
+        message: "Book not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Book deleted successfully"
+    });
+  } catch (error) {
+    res.status(404).json({
+      message: "Book not found"
+    });
+  }
+});
+
+module.exports = router;
+
+7.Main server
+Create:
+backend/server.js
+
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+
+const authRoutes = require("./routes/auth");
+const bookRoutes = require("./routes/books");
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+mongoose
+  .connect("mongodb://127.0.0.1:27017/booklab")
+  .then(() => {
+    console.log("MongoDB connected");
+  })
+  .catch((error) => {
+    console.log(error);
+  });
+
+app.use("/api/auth", authRoutes);
+app.use("/api/books", bookRoutes);
+
+app.listen(5000, () => {
+  console.log("Server running on port 5000");
+});
+To run 
+node server.js
+Method	URL	Purpose
+POST	/api/auth/register	Register
+POST	/api/auth/login	Login
+POST	/api/books	Add book
+GET	/api/books	Get all
+GET	/api/books/:id	Get one
+DELETE	/api/books/:id	Delete
+
+React setup
+Go back:
+cd ..
+npm create vite@latest frontend -- --template react
+cd frontend
+npm install
+npm run dev
+8. src/App.jsx
+import { useEffect, useState } from "react";
+
+function App() {
+  const [view, setView] = useState("login");
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [books, setBooks] = useState([]);
+
+  const [title, setTitle] = useState("");
+  const [author, setAuthor] = useState("");
+  const [year, setYear] = useState("");
+
+  const [error, setError] = useState("");
+
+  const token = localStorage.getItem("token");
+
+  const login = async () => {
+    setError("");
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email,
+            password
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message);
+        return;
+      }
+
+      localStorage.setItem("token", data.token);
+      setView("dashboard");
+    } catch (error) {
+      setError("Server error");
+    }
+  };
+
+  const register = async () => {
+    setError("");
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/auth/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email,
+            password
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message);
+        return;
+      }
+
+      localStorage.setItem("token", data.token);
+      setView("dashboard");
+    } catch (error) {
+      setError("Server error");
+    }
+  };
+
+  const fetchBooks = async () => {
+    const response = await fetch(
+      "http://localhost:5000/api/books",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (response.ok) {
+      setBooks(data);
+    }
+  };
+
+  const addBook = async () => {
+    setError("");
+
+    if (!title) {
+      setError("Title is required");
+      return;
+    }
+
+    const response = await fetch(
+      "http://localhost:5000/api/books",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title,
+          author,
+          year
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setError(data.message);
+      return;
+    }
+
+    setTitle("");
+    setAuthor("");
+    setYear("");
+
+    fetchBooks();
+  };
+
+  const deleteBook = async (id) => {
+    const response = await fetch(
+      `http://localhost:5000/api/books/${id}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (response.ok) {
+      fetchBooks();
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    setView("login");
+  };
+
+  useEffect(() => {
+    if (view === "dashboard" && token) {
+      fetchBooks();
+    }
+  }, [view]);
+
+  if (view === "login") {
+    return (
+      <div>
+        <h1>Login</h1>
+
+        <input
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        <br />
+
+        <input
+          placeholder="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        <br />
+
+        <button onClick={login}>
+          Login
+        </button>
+
+        <button onClick={() => setView("register")}>
+          Go to Register
+        </button>
+
+        <p>{error}</p>
+      </div>
+    );
+  }
+
+  if (view === "register") {
+    return (
+      <div>
+        <h1>Register</h1>
+
+        <input
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        <br />
+
+        <input
+          placeholder="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        <br />
+
+        <button onClick={register}>
+          Register
+        </button>
+
+        <button onClick={() => setView("login")}>
+          Go to Login
+        </button>
+
+        <p>{error}</p>
+      </div>
+    );
+  }
+
+  if (!token) {
+    return (
+      <button onClick={() => setView("login")}>
+        Go to Login
+      </button>
+    );
+  }
+
+  return (
+    <div>
+      <h1>Book Dashboard</h1>
+
+      <button onClick={logout}>
+        Logout
+      </button>
+
+      <h2>Add Book</h2>
+
+      <input
+        placeholder="Title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
+
+      <input
+        placeholder="Author"
+        value={author}
+        onChange={(e) => setAuthor(e.target.value)}
+      />
+
+      <input
+        placeholder="Year"
+        value={year}
+        onChange={(e) => setYear(e.target.value)}
+      />
+
+      <button onClick={addBook}>
+        Add Book
+      </button>
+
+      <p>{error}</p>
+
+      <h2>Books</h2>
+
+      {books.map((book) => (
+        <div key={book._id}>
+          <p>
+            {book.title} - {book.author} - {book.year}
+          </p>
+
+          <button onClick={() => deleteBook(book._id)}>
+            Delete
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default App;
